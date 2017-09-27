@@ -1,5 +1,4 @@
 require 'spec_helper_acceptance'
-require 'puppetlabs_spec_helper/puppetlabs_spec_helper'
 
 PUPPETLABS_GPG_KEY_SHORT_ID    = 'EF8D349F'.freeze
 PUPPETLABS_GPG_KEY_LONG_ID     = '7F438280EF8D349F'.freeze
