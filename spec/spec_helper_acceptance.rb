@@ -44,9 +44,11 @@ RSpec.configure do |c|
   c.formatter = :documentation
 end
 
-if ENV['BEAKER_provision'] == 'yes'
-  scp_to(hosts, '/home/david/git/puppet-resource_api/pkg/puppet-resource_api-0.1.0.gem', '/tmp/puppet-resource_api-0.1.0.gem')
-  on(hosts, '/opt/puppetlabs/puppet/bin/gem install /tmp/puppet-resource_api-0.1.0.gem')
+if ENV['BEAKER_provision'] != 'no'
+  resource_api_home = `bundle list puppet-resource_api`.strip
+  system("cd #{resource_api_home} && bundle install && bundle list && bundle exec rake build && mv -v pkg/puppet-resource_api-*.gem pkg/puppet-resource_api.gem")
+  scp_to(hosts, "#{resource_api_home}/pkg/puppet-resource_api.gem", '/tmp/puppet-resource_api.gem')
+  on(hosts, '/opt/puppetlabs/puppet/bin/gem install /tmp/puppet-resource_api.gem')
 end
 
 shared_context 'a puppet resource run' do |typename, name, **beaker_opts|
