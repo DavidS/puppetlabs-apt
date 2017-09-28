@@ -1,3 +1,4 @@
+require 'hiera'
 require 'beaker/testmode_switcher/dsl'
 require 'beaker-rspec' if ENV['BEAKER_TESTMODE'] != 'local'
 
