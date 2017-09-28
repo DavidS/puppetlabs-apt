@@ -21,7 +21,11 @@ class Puppet::Provider::AptKey2::AptKey2
                    r[:name].upcase
                  end
 
-      if r[:name].length != 40
+      # If an 8 or 16 character short was provided; change the name to the full 40 character fingerprint
+      # For any other length; leave the name unchanged. This value will subsequently fail validation.
+      # TODO: The full 40 characters could be substituted in any time r[:name].length != 40 but to remain like-for-like
+      # with the pre resource-api version of this type, allow the name to fail validation if not 8, 16 or 40 chars long.  
+      if [8,16].include?(r[:name].length)
         context.warning(r[:name], 'The name should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.')
         fingerprint = key_list_lines.select { |l| l.start_with?('fpr:') }
                                     .map { |l| l.split(':').last }
