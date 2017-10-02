@@ -202,7 +202,7 @@ end
           pp = pp_template % { server: server }
 
           result = execute_manifest(pp, trace: false, expect_failures: true)
-          expect(result.stderr).to match(%r{(Host not found|Couldn't resolve host|keyserver receive failed: No name|Invalid value)})
+          expect(result.stderr + result.stdout).to match(%r{(Host not found|Couldn't resolve host|keyserver receive failed: No name|Invalid value)})
         end
       end
 
