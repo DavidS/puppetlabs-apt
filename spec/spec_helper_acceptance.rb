@@ -8,6 +8,13 @@ if ENV['BEAKER_TESTMODE'] != 'local'
   run_puppet_install_helper
   install_module_on(hosts)
   install_module_dependencies_on(hosts)
+
+  unless ENV['BEAKER_provision'] == 'no'
+    resource_api_home = `bundle list puppet-resource_api`.strip
+    system("cd #{resource_api_home} && bundle install && bundle list && bundle exec rake build && mv -v pkg/puppet-resource_api-*.gem pkg/puppet-resource_api.gem")
+    scp_to(hosts, "#{resource_api_home}/pkg/puppet-resource_api.gem", '/tmp/puppet-resource_api.gem')
+    on(hosts, '/opt/puppetlabs/puppet/bin/gem install /tmp/puppet-resource_api.gem')
+  end
 end
 
 # This method allows a block to be passed in and if an exception is raised
@@ -42,13 +49,6 @@ RSpec.configure do |c|
 
   # Readable test descriptions
   c.formatter = :documentation
-end
-
-if ENV['BEAKER_provision'] != 'no'
-  resource_api_home = `bundle list puppet-resource_api`.strip
-  system("cd #{resource_api_home} && bundle install && bundle list && bundle exec rake build && mv -v pkg/puppet-resource_api-*.gem pkg/puppet-resource_api.gem")
-  scp_to(hosts, "#{resource_api_home}/pkg/puppet-resource_api.gem", '/tmp/puppet-resource_api.gem')
-  on(hosts, '/opt/puppetlabs/puppet/bin/gem install /tmp/puppet-resource_api.gem')
 end
 
 shared_context 'a puppet resource run' do |typename, name, **beaker_opts|
