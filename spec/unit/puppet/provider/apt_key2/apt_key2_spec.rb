@@ -173,7 +173,7 @@ EOS
     context 'when fetching a key from the keyserver' do
       it 'updates the system' do
         expect(context).to receive(:creating).with(fingerprint).and_yield
-        expect(apt_key_cmd).to receive(:run).with(context, 'adv', '--keyserver', 'keyserver.example.com', '--recv-keys', fingerprint, noop: false).and_return 0
+        expect(apt_key_cmd).to receive(:run).with(context, 'adv', '--keyserver', 'keyserver.example.com', '--recv-keys', fingerprint, stdout_loglevel: :notice, noop: false).and_return 0
         provider.set(context, fingerprint =>
         {
           is: nil,

@@ -159,7 +159,8 @@ class Puppet::Provider::AptKey2::AptKey2
           args.push('--keyserver-options', should[:options])
         end
         args.push('--recv-keys', should[:name])
-        @apt_key_cmd.run(context, *args, noop: noop)
+        # apt-key may write warnings to stdout instead of stderr, therefore make stdout visible
+        @apt_key_cmd.run(context, *args, stdout_loglevel: :notice, noop: noop)
       elsif should[:content]
         temp_key_file(context, name, should[:content]) do |key_file|
           # @apt_key_cmd.run(context, 'add', key_file, noop: noop)
