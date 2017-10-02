@@ -126,7 +126,7 @@ end
     describe 'content =>' do
       context 'multiple keys' do
         after(:each) do
-          shell_ex("apt-key del #{PUPPETLABS_GPG_KEY_FINGERPRINT} > /dev/null")
+          shell_ex("apt-key del #{PUPPETLABS_GPG_KEY_SHORT_ID} > /dev/null")
         end
 
         it 'runs without errors' do
@@ -271,7 +271,7 @@ end
 
       context 'ftp://' do
         before(:each) do
-          shell_ex("apt-key del #{CENTOS_GPG_KEY_LONG_ID}",
+          shell_ex("apt-key del #{CENTOS_GPG_KEY_SHORT_ID}",
                    acceptable_exit_codes: [0, 1, 2])
         end
 
