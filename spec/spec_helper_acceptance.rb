@@ -2,6 +2,13 @@ require 'hiera'
 require 'beaker/testmode_switcher/dsl'
 require 'beaker-rspec' if ENV['BEAKER_TESTMODE'] != 'local'
 
+def install_from_local_checkout_on(hosts, name)
+  home = `bundle list #{name}`.strip
+  system("cd #{home} && bundle install && bundle list && bundle exec rake build && mv -v pkg/#{name}-*.gem pkg/#{name}.gem")
+  scp_to(hosts, "#{home}/pkg/#{name}.gem", "/tmp/#{name}.gem")
+  on(hosts, "/opt/puppetlabs/puppet/bin/gem install /tmp/#{name}.gem")
+end
+
 if ENV['BEAKER_TESTMODE'] != 'local'
   require 'beaker/puppet_install_helper'
   require 'beaker/module_install_helper'
@@ -10,10 +17,11 @@ if ENV['BEAKER_TESTMODE'] != 'local'
   install_module_dependencies_on(hosts)
 
   unless ENV['BEAKER_provision'] == 'no'
-    resource_api_home = `bundle list puppet-resource_api`.strip
-    system("cd #{resource_api_home} && bundle install && bundle list && bundle exec rake build && mv -v pkg/puppet-resource_api-*.gem pkg/puppet-resource_api.gem")
-    scp_to(hosts, "#{resource_api_home}/pkg/puppet-resource_api.gem", '/tmp/puppet-resource_api.gem')
-    on(hosts, '/opt/puppetlabs/puppet/bin/gem install /tmp/puppet-resource_api.gem')
+    agent = find_host_with_role :agent
+    puts "Installing dependencies for #{agent.platform}"
+    install_from_local_checkout_on agent, 'childprocesscore'
+    install_from_local_checkout_on agent, 'childprocess' if agent.platform =~ /^win-/
+    install_from_local_checkout_on agent, 'puppet-resource_api'
   end
 end
 

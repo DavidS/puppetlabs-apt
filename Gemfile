@@ -65,6 +65,8 @@ gem 'hiera', *location_for(ENV['HIERA_GEM_VERSION']) if ENV['HIERA_GEM_VERSION']
 
 # gem 'puppet-resource_api', path: '/home/david/git/puppet-resource_api'
 gem 'puppet-resource_api', git: 'https://github.com/puppetlabs/puppet-resource_api', ref: 'master'
+gem 'childprocesscore', git: 'https://github.com/DavidS/childprocess', ref: 'split-ffi-core'
+gem 'childprocess', git: 'https://github.com/DavidS/childprocess', ref: 'split-ffi-core'
 gem 'coveralls'
 gem 'simplecov-console'
 
