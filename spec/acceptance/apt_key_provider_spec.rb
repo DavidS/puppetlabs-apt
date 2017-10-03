@@ -221,8 +221,8 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
           shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
         end
 
@@ -235,8 +235,8 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
           shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
         end
 
@@ -249,7 +249,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{404 Not Found})
           end
         end
@@ -263,7 +263,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{could not resolve})
           end
         end
@@ -271,8 +271,7 @@ end
 
       context 'ftp://' do
         before(:each) do
-          shell_ex("apt-key del #{CENTOS_GPG_KEY_SHORT_ID}",
-                   acceptable_exit_codes: [0, 1, 2])
+          shell_ex("apt-key del #{CENTOS_GPG_KEY_SHORT_ID}")
         end
 
         it 'works' do
@@ -284,8 +283,8 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
           shell_ex(CENTOS_KEY_CHECK_COMMAND)
         end
 
@@ -298,7 +297,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{550 Failed to open})
           end
         end
@@ -312,7 +311,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{could not resolve})
           end
         end
@@ -328,8 +327,8 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
           shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
         end
 
@@ -342,8 +341,8 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
           shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
         end
 
@@ -356,7 +355,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{404 Not Found})
           end
         end
@@ -370,7 +369,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{could not resolve})
           end
         end
@@ -378,12 +377,12 @@ end
 
       context '/path/that/exists' do
         before(:each) do
-          shell("curl -o /tmp/puppetlabs-pubkey.gpg \
+          shell_ex("curl -o /tmp/puppetlabs-pubkey.gpg \
                 http://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}")
         end
 
         after(:each) do
-          shell('rm /tmp/puppetlabs-pubkey.gpg')
+          shell_ex('rm /tmp/puppetlabs-pubkey.gpg')
         end
 
         it 'works' do
@@ -395,9 +394,9 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
-          shell(PUPPETLABS_KEY_CHECK_COMMAND)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
+          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
         end
       end
 
@@ -411,7 +410,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{does not exist})
           end
         end
@@ -419,11 +418,11 @@ end
 
       context '/path/that/exists/with/bogus/content' do
         before(:each) do
-          shell('echo "here be dragons" > /tmp/fake-key.gpg')
+          shell_ex('echo "here be dragons" > /tmp/fake-key.gpg')
         end
 
         after(:each) do
-          shell('rm /tmp/fake-key.gpg')
+          shell_ex('rm /tmp/fake-key.gpg')
         end
         it 'fails' do
           pp = <<-EOS
@@ -434,7 +433,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{no valid OpenPGP data found})
           end
         end
@@ -452,9 +451,9 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
-          shell(PUPPETLABS_KEY_CHECK_COMMAND)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
+          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
         end
       end
     end
@@ -470,8 +469,8 @@ end
         }
         EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
+          execute_manifest(pp, catch_failures: true)
+          execute_manifest(pp, catch_changes: true)
         end
       end
 
@@ -485,7 +484,7 @@ end
         }
         EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
+          execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{do not match})
           end
         end
