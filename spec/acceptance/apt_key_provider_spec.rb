@@ -48,8 +48,8 @@ end
     context 'with an already installed key' do
       # run on :all hook to cooperate with `a puppet resource run` shared context
       before(:all) do
-        # puts "apt-key add #{my_fixture('fedora.txt')}"
-        shell_ex("apt-key add #{my_fixture('fedora.txt')} >/dev/null 2>&1")
+        create_remote_file_ex('/tmp/fedora.txt', my_fixture_read('fedora.txt'))
+        shell_ex('apt-key add /tmp/fedora.txt >/dev/null 2>&1')
       end
 
       context 'when looked for using puppet resource' do
