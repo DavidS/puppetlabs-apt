@@ -21,7 +21,7 @@ if ENV['BEAKER_TESTMODE'] != 'local'
   unless ENV['BEAKER_provision'] == 'no'
     puts "Installing dependencies for #{default.platform}"
     install_from_local_checkout_on default, 'childprocesscore'
-    install_from_local_checkout_on default, 'childprocess' if default.platform =~ /^win-/
+    install_from_local_checkout_on default, 'childprocess' if default.platform =~ %r{^win-}
     install_from_local_checkout_on default, 'puppet-resource_api'
   end
   puts 'travis_fold:end:beaker_install'
