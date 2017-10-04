@@ -139,8 +139,7 @@ class Puppet::Provider::AptKey2::AptKey2
       elsif should[:content]
         add_key_from_content(context, name, should[:content])
       elsif should[:source]
-        key_file = source_to_file(should[:source])
-        apt_key('add', key_file.path, noop: noop)
+        add_key_from_content(context, name, content_from_source(should[:source]))
         # In case we really screwed up, better safe than sorry.
       else
         context.fail("an unexpected condition occurred while trying to add the key: #{name} (content: #{should[:content].inspect}, source: #{should[:source].inspect})")
@@ -200,6 +199,34 @@ class Puppet::Provider::AptKey2::AptKey2
     ensure
       file.close
       file.unlink
+    end
+  end
+
+  def content_from_source(uri)
+    parsed_uri = URI.parse(uri)
+    if parsed_uri.scheme.nil?
+      raise "The file #{uri} does not exist" unless File.exist?(uri)
+      # Because the tempfile method has to return a live object to prevent GC
+      # of the underlying file from occuring too early, we also have to return
+      # a file object here.  The caller can still call the #path method on the
+      # closed file handle to get the path.
+      File.read(uri)
+    else
+      begin
+        # Only send basic auth if URL contains userinfo
+        # Some webservers (e.g. Amazon S3) return code 400 if empty basic auth is sent
+        if parsed_uri.userinfo.nil?
+          parsed_uri.read
+        else
+          user_pass = parsed_uri.userinfo.split(':')
+          parsed_uri.userinfo = ''
+          open(parsed_uri, http_basic_authentication: user_pass).read
+        end
+      rescue OpenURI::HTTPError, Net::FTPPermError => e
+        raise "#{e.message} for #{uri}"
+      rescue SocketError
+        raise "could not resolve #{uri}"
+      end
     end
   end
 end

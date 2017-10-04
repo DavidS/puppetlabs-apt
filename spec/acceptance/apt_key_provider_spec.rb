@@ -207,6 +207,10 @@ end
     end
 
     describe 'source =>' do
+      after(:each) do
+        shell_ex("apt-key del #{PUPPETLABS_GPG_KEY_SHORT_ID} > /dev/null")
+      end
+
       context 'http://' do
         it 'works' do
           pp = <<-EOS

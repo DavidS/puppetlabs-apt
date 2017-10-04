@@ -220,6 +220,76 @@ EOS
       end
     end
 
+    describe 'source =>' do
+      before(:each) do
+        allow(context).to receive(:creating).with(fingerprint).and_yield
+        # shortcut excessive stubbing. The add_key_from_content method is already exercised in 'when adding a key from a string'
+        expect(provider).to receive(:add_key_from_content).with(context, fingerprint, 'public gpg key block') # rubocop:disable RSpec/SubjectStub,RSpec/ExpectInHook
+      end
+
+      describe 'a path' do
+        it 'updates the system using that file' do
+          expect(File).to receive(:exist?).with('/tmp/keyfile').and_return(true)
+          expect(File).to receive(:read).with('/tmp/keyfile').and_return('public gpg key block')
+
+          provider.set(context, fingerprint =>
+          {
+            is: nil,
+            should: {
+              name: fingerprint,
+              ensure: :present,
+              source: '/tmp/keyfile',
+            },
+          })
+        end
+      end
+
+      describe 'a remote URL' do
+        let(:uri) { object_double(URI.parse('http://example.org/gpg.txt')) }
+
+        it 'updates the system using that download' do
+          expect(URI).to receive(:parse).with('http://example.org/gpg.txt').and_return(uri)
+          expect(uri).to receive(:scheme).and_return('http')
+          expect(uri).to receive(:userinfo).and_return(nil)
+          expect(uri).to receive(:read).and_return('public gpg key block')
+
+          provider.set(context, fingerprint =>
+          {
+            is: nil,
+            should: {
+              name: fingerprint,
+              ensure: :present,
+              source: 'http://example.org/gpg.txt',
+            },
+          })
+        end
+      end
+
+      describe 'a remote URL with username and password' do
+        let(:uri) { object_double(URI.parse('http://foo:bar@example.org/gpg.txt')) }
+        let(:io) { instance_double('IO') }
+
+        it 'updates the system using that download' do
+          expect(URI).to receive(:parse).with('http://foo:bar@example.org/gpg.txt').and_return(uri)
+          expect(uri).to receive(:scheme).and_return('http')
+          expect(uri).to receive(:userinfo).and_return('foo:bar').twice
+          expect(uri).to receive(:userinfo=).with('')
+          expect(provider).to receive(:open).with(uri, http_basic_authentication: %w[foo bar]).and_return(io) # rubocop:disable RSpec/SubjectStub
+          expect(io).to receive(:read).and_return('public gpg key block')
+
+          provider.set(context, fingerprint =>
+          {
+            is: nil,
+            should: {
+              name: fingerprint,
+              ensure: :present,
+              source: 'http://foo:bar@example.org/gpg.txt',
+            },
+          })
+        end
+      end
+    end
+
     context 'when deleting a key' do
       it 'updates the system' do
         expect(context).to receive(:deleting).with(fingerprint).and_yield

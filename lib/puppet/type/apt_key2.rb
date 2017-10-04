@@ -34,6 +34,7 @@ Puppet::ResourceApi.register_type(
     source:      {
       type: 'Variant[Stdlib::Absolutepath, Pattern[/\A(https?|ftp):\/\//]]',
       desc: 'Location of a GPG key file, /path/to/file, ftp://, http:// or https://',
+      behaviour: :parameter,
     },
     server:      {
       type:      'Pattern[/\A((hkp|http|https):\/\/)?([a-z\d])([a-z\d-]{0,61}\.)+[a-z\d]+(:\d{2,5})?$/]',
