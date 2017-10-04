@@ -8,6 +8,9 @@ RSpec.describe Puppet::Provider::AptKey2::AptKey2 do
   subject(:provider) { described_class.new }
 
   let(:context) { instance_double('Puppet::ResourceApi::BaseContext', 'context') }
+  let(:apt_key_cmd) { instance_double('Puppet::ResourceApi::Command', 'apt_key_cmd') }
+  let(:gpg_cmd) { instance_double('Puppet::ResourceApi::Command', 'gpg_cmd') }
+
   let(:key_list) do
     <<EOS
 Executing: /tmp/apt-key-gpghome.4VkaIao1Ca/gpg.1.sh --list-keys --with-colons --fingerprint --fixed-list-mode
@@ -29,10 +32,22 @@ uid:-::::1416603673::15C761B84F0C9C293316B30F007E34BE74546B48::Debian Archive Au
 EOS
   end
 
+  before(:each) do
+    allow(context).to receive(:is_a?).with(Puppet::ResourceApi::BaseContext).and_return(true)
+    allow(Puppet::ResourceApi::Command).to receive(:new).with('apt-key').and_return(apt_key_cmd)
+    allow(Puppet::ResourceApi::Command).to receive(:new).with('/usr/bin/gpg').and_return(gpg_cmd)
+    expect(subject).not_to receive(:`) # rubocop:disable RSpec/NamedSubject,RSpec/ExpectInHook
+  end
+
   describe '#canonicalize(resources)' do
     before(:each) do
-      allow(provider).to receive(:`).with('apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null').and_return(key_list) # rubocop:disable RSpec/SubjectStub
+      allow(apt_key_cmd).to receive(:run)
+        .with(context,
+              'adv', '--list-keys', '--with-colons', '--fingerprint', '--fixed-list-mode',
+              stdout_destination: :store, stderr_loglevel: :debug)
+        .and_return(OpenStruct.new(stdout: key_list))
       allow(context).to receive(:warning)
+      allow(context).to receive(:debug)
     end
 
     it('works with empty inputs') { expect(provider.canonicalize(context, [])).to eq [] }
@@ -84,20 +99,13 @@ EOS
   end
 
   describe '#get' do
-    let(:apt_key_cmd) { instance_double('Puppet::ResourceApi::Command') }
-    let(:process) { instance_double('ChildProcess::AbstractProcess') }
-    let(:io) { instance_double('ChildProcess::AbstractIO') }
-    let(:stdout) { StringIO.new key_list }
-
-    before(:each) do
-      allow(Puppet::ResourceApi::Command).to receive(:new).and_return(apt_key_cmd)
-      allow(process).to receive(:io).and_return(io)
-    end
-
     it 'processes input' do
-      # expect(apt_key_cmd).to receive(:run).with(context, any_args).and_yield(process)
-      # expect(io).to receive(:stdout).and_return(stdout)
-      expect(provider).to receive(:`).with('apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null').and_return(stdout) # rubocop:disable RSpec/SubjectStub
+      expect(apt_key_cmd).to receive(:run)
+        .with(context,
+              'adv', '--list-keys', '--with-colons', '--fingerprint', '--fixed-list-mode',
+              stdout_destination: :store, stderr_loglevel: :debug)
+        .and_return(OpenStruct.new(stdout: key_list))
+
       expect(provider.get(context)).to eq [
         { ensure: 'present',
           name: '6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9',
@@ -126,15 +134,8 @@ EOS
   end
 
   describe '#set(context, changes)' do
-    let(:apt_key_cmd) { instance_double('Puppet::ResourceApi::Command') }
-    let(:process) { instance_double('ChildProcess::AbstractProcess') }
-    let(:io) { instance_double('ChildProcess::AbstractIO') }
     let(:fingerprint) { 'A' * 40 }
     let(:short) { 'A' * 8 }
-
-    before(:each) do
-      allow(Puppet::ResourceApi::Command).to receive(:new).and_return(apt_key_cmd)
-    end
 
     context 'when passing in empty changes' do
       it 'does nothing' do
@@ -173,7 +174,10 @@ EOS
     context 'when fetching a key from the keyserver' do
       it 'updates the system' do
         expect(context).to receive(:creating).with(fingerprint).and_yield
-        expect(apt_key_cmd).to receive(:run).with(context, 'adv', '--keyserver', 'keyserver.example.com', '--recv-keys', fingerprint, stdout_loglevel: :notice, noop: false).and_return 0
+        expect(apt_key_cmd).to receive(:run)
+          .with(context,
+                'adv', '--keyserver', 'keyserver.example.com', '--recv-keys', fingerprint,
+                stdout_loglevel: :notice).and_return(OpenStruct.new(exit_code: 0))
         provider.set(context, fingerprint =>
         {
           is: nil,
@@ -197,11 +201,13 @@ EOS
         allow(key_tempfile).to receive(:close)
         expect(key_tempfile).to receive(:unlink)
         expect(File).to receive(:executable?).with('/usr/bin/gpg').and_return(true)
-        expect(provider).to receive(:`).with('/usr/bin/gpg --with-fingerprint --with-colons tempfilename').and_return("\nfpr:::::::::#{fingerprint}:\n") # rubocop:disable RSpec/SubjectStub
+        expect(gpg_cmd).to receive(:run)
+          .with(context, '--with-fingerprint', '--with-colons', 'tempfilename',
+                stdout_destination: :store)
+          .and_return(OpenStruct.new(stdout: "\nfpr:::::::::#{fingerprint}:\n"))
         expect(context).to receive(:debug).with('Fingerprint verified against extracted key')
 
-        # expect(apt_key_cmd).to receive(:run).with(context, 'add', 'tempfilename', noop: false).and_return 0
-        expect(provider).to receive(:system).with('apt-key add tempfilename') # rubocop:disable RSpec/SubjectStub
+        expect(apt_key_cmd).to receive(:run).with(context, 'add', 'tempfilename').and_return(OpenStruct.new(exit_code: 0))
         provider.set(context, fingerprint =>
         {
           is: nil,
@@ -217,7 +223,7 @@ EOS
     context 'when deleting a key' do
       it 'updates the system' do
         expect(context).to receive(:deleting).with(fingerprint).and_yield
-        expect(apt_key_cmd).to receive(:run).with(context, 'del', short, noop: false).and_return 0
+        expect(apt_key_cmd).to receive(:run).with(context, 'del', short).and_return(OpenStruct.new(exit_code: 0))
         provider.set(context, fingerprint =>
         {
           is: {

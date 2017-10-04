@@ -14,10 +14,6 @@ CENTOS_GPG_KEY_FILE            = 'RPM-GPG-KEY-CentOS-6'.freeze
 
 SHOULD_NEVER_EXIST_ID          = 'EF8D349F'.freeze
 
-KEY_CHECK_COMMAND              = 'apt-key adv --list-keys --with-colons --fingerprint | grep '.freeze
-PUPPETLABS_KEY_CHECK_COMMAND   = "#{KEY_CHECK_COMMAND} #{PUPPETLABS_GPG_KEY_FINGERPRINT}".freeze
-CENTOS_KEY_CHECK_COMMAND       = "#{KEY_CHECK_COMMAND} #{CENTOS_GPG_KEY_FINGERPRINT}".freeze
-
 MAX_TIMEOUT_RETRY              = 3
 TIMEOUT_RETRY_WAIT             = 5
 TIMEOUT_ERROR_MATCHER = %r{no valid OpenPGP data found}
@@ -214,40 +210,40 @@ end
       context 'http://' do
         it 'works' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'http://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'http://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
 
         it 'works with userinfo' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'http://dummyuser:dummypassword@#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'http://dummyuser:dummypassword@#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
 
         it 'fails with a 404' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'http://#{PUPPETLABS_APT_URL}/herpderp.gpg',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'http://#{PUPPETLABS_APT_URL}/herpderp.gpg',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{404 Not Found})
@@ -256,12 +252,12 @@ end
 
         it 'fails with a socket error' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'http://apt.puppetlabss.com/herpderp.gpg',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'http://apt.puppetlabss.com/herpderp.gpg',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{could not resolve})
@@ -276,16 +272,16 @@ end
 
         it 'works' do
           pp = <<-EOS
-        #{typename} { 'CentOS 6':
-          id     => '#{CENTOS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'ftp://#{CENTOS_REPO_URL}/#{CENTOS_GPG_KEY_FILE}',
-        }
-        EOS
+            #{typename} { 'CentOS 6':
+              id     => '#{CENTOS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'ftp://#{CENTOS_REPO_URL}/#{CENTOS_GPG_KEY_FILE}',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
-          shell_ex(CENTOS_KEY_CHECK_COMMAND)
+          check_key(CENTOS_GPG_KEY_FINGERPRINT)
         end
 
         it 'fails with a 550' do
@@ -329,7 +325,7 @@ end
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
 
         it 'works with userinfo' do
@@ -343,7 +339,7 @@ end
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
 
         it 'fails with a 404' do
@@ -396,7 +392,7 @@ end
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
       end
 
@@ -453,7 +449,7 @@ end
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
       end
     end

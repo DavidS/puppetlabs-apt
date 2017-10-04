@@ -12,8 +12,6 @@ class Puppet::Provider::AptKey2::AptKey2
 
   def canonicalize(context, resources)
     resources.each do |r|
-      # require'pry';binding.pry
-      # puts "Canonicalizing: #{r.inspect}"
       r[:name] ||= r[:id]
       r[:name] = if r[:name].start_with?('0x')
                    r[:name][2..-1].upcase
@@ -27,9 +25,10 @@ class Puppet::Provider::AptKey2::AptKey2
       # with the pre resource-api version of this type, allow the name to fail validation if not 8, 16 or 40 chars long.
       if [8, 16].include?(r[:name].length)
         context.warning(r[:name], 'The name should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.')
-        fingerprint = key_list_lines.select { |l| l.start_with?('fpr:') }
-                                    .map { |l| l.split(':').last }
-                                    .find { |fp| fp.end_with? r[:name] }
+        fingerprint = key_list_lines(context)
+                      .select { |l| l.start_with?('fpr:') }
+                      .map { |l| l.split(':').last }
+                      .find { |fp| fp.end_with? r[:name] }
         r[:name] = fingerprint if fingerprint
       end
 
@@ -37,22 +36,17 @@ class Puppet::Provider::AptKey2::AptKey2
     end
   end
 
-  def key_list_lines
-    `apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null`.each_line.map(&:strip)
+  def key_list_lines(context)
+    result = @apt_key_cmd.run(context, 'adv', '--list-keys', '--with-colons', '--fingerprint', '--fixed-list-mode',
+                              stdout_destination: :store, stderr_loglevel: :debug)
+    result.stdout.each_line.map(&:strip)
   end
 
-  def get(_context)
+  def get(context)
     pub_line   = nil
     fpr_line   = nil
 
-    # result = @apt_key_cmd.run(
-    #   context,
-    #   'adv', '--list-keys', '--with-colons', '--fingerprint', '--fixed-list-mode',
-    #   stdout_destination: :capture,
-    #   stderr_destination: :discard
-    # )
-    # lines = result.stdout
-    key_list_lines.map { |line|
+    key_list_lines(context).map { |line|
       if line.start_with?('pub')
         pub_line = line
         # reset fpr_line, to skip any previous subkeys which were collected
@@ -60,11 +54,8 @@ class Puppet::Provider::AptKey2::AptKey2
       elsif line.start_with?('fpr')
         fpr_line = line
       end
-      # puts "debug: parsing #{line}; fpr: #{fpr_line.inspect}; pub: #{pub_line.inspect}"
 
       next unless pub_line && fpr_line
-
-      # puts "debug: key_line_to_hash"
 
       hash = self.class.key_line_to_hash(pub_line, fpr_line)
 
@@ -131,25 +122,9 @@ class Puppet::Provider::AptKey2::AptKey2
     #     logger.fail(title, 'The properties content and source are mutually exclusive')
     #     next
     #   end
-
-    #   current = current_state[title]
-    #   if current && resource[:ensure].to_s == 'absent'
-    #     logger.deleting(title) do
-    #       begin
-    #         apt_key('del', resource[:short], noop: noop)
-    #         r = execute(["#{command(:apt_key)} list | grep '/#{resource[:short]}\s'"], failonfail: false)
-    #       end while r.exitstatus.zero?
-    #     end
-    #   elsif current && resource[:ensure].to_s == 'present'
-    #     logger.warning(title, 'No updating implemented')
-    #     # update(key, noop: noop)
-    #   elsif !current && resource[:ensure].to_s == 'present'
-    #     create(title, resource, noop: noop)
-    #   end
-    # end
   end
 
-  def create(context, name, should, noop = false)
+  def create(context, name, should)
     context.creating(name) do
       if should[:source].nil? && should[:content].nil?
         # Breaking up the command like this is needed because it blows up
@@ -160,15 +135,9 @@ class Puppet::Provider::AptKey2::AptKey2
         end
         args.push('--recv-keys', should[:name])
         # apt-key may write warnings to stdout instead of stderr, therefore make stdout visible
-        @apt_key_cmd.run(context, *args, stdout_loglevel: :notice, noop: noop)
+        @apt_key_cmd.run(context, *args, stdout_loglevel: :notice)
       elsif should[:content]
-        temp_key_file(context, name, should[:content]) do |key_file|
-          # @apt_key_cmd.run(context, 'add', key_file, noop: noop)
-          # require'pry';binding.pry
-          # puts key_file
-          # puts File.read(key_file).inspect
-          system("apt-key add #{key_file}")
-        end
+        add_key_from_content(context, name, should[:content])
       elsif should[:source]
         key_file = source_to_file(should[:source])
         apt_key('add', key_file.path, noop: noop)
@@ -179,12 +148,23 @@ class Puppet::Provider::AptKey2::AptKey2
     end
   end
 
-  def delete(context, name, noop = false)
+  def delete(context, name)
     context.deleting(name) do
       # Although canonicalize logs a warning NOT to use the short id instead of all 40 characters, `apt-key del` fails to delete
       # on some systems unless the short id is used. Additionally, such systems will return 0 even though deletion failed.
       # Ref: https://bugs.launchpad.net/ubuntu/+source/apt/+bug/1481871
-      @apt_key_cmd.run(context, 'del', name[-8..-1], noop: noop)
+      @apt_key_cmd.run(context, 'del', name[-8..-1])
+
+      # begin
+      #   apt_key('del', resource[:short])
+      #   r = execute(["#{command(:apt_key)} list | grep '/#{resource[:short]}\s'"], failonfail: false)
+      # end while r.exitstatus.zero?
+    end
+  end
+
+  def add_key_from_content(context, name, content)
+    temp_key_file(context, name, content) do |key_file|
+      @apt_key_cmd.run(context, 'add', key_file)
     end
   end
 
@@ -196,7 +176,14 @@ class Puppet::Provider::AptKey2::AptKey2
       file.write content
       file.close
       if File.executable? '/usr/bin/gpg'
-        extracted_keys = `/usr/bin/gpg --with-fingerprint --with-colons #{file.path}`.each_line.select { |line| line =~ %r{^fpr:} }.map { |fpr| fpr.strip.split(':')[9] }
+        extracted_keys =
+          @gpg_cmd.run(context,
+                       '--with-fingerprint', '--with-colons', file.path,
+                       stdout_destination: :store)
+                  .stdout
+                  .each_line
+                  .select { |line| line =~ %r{^fpr:} }
+                  .map { |fpr| fpr.strip.split(':')[9] }
 
         if extracted_keys.include? name
           context.debug('Fingerprint verified against extracted key')
