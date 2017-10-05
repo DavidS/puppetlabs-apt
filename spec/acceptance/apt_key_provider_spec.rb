@@ -290,12 +290,12 @@ end
 
         it 'fails with a 550' do
           pp = <<-EOS
-        #{typename} { 'CentOS 6':
-          id     => '#{SHOULD_NEVER_EXIST_ID}',
-          ensure => 'present',
-          source => 'ftp://#{CENTOS_REPO_URL}/herpderp.gpg',
-        }
-        EOS
+            #{typename} { 'CentOS 6':
+              id     => '#{SHOULD_NEVER_EXIST_ID}',
+              ensure => 'present',
+              source => 'ftp://#{CENTOS_REPO_URL}/herpderp.gpg',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{550 Failed to open})
@@ -304,12 +304,12 @@ end
 
         it 'fails with a socket error' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'ftp://apt.puppetlabss.com/herpderp.gpg',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'ftp://apt.puppetlabss.com/herpderp.gpg',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{could not resolve})
@@ -320,12 +320,12 @@ end
       context 'https://' do
         it 'works' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
@@ -334,12 +334,12 @@ end
 
         it 'works with userinfo' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => 'https://dummyuser:dummypassword@#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => 'https://dummyuser:dummypassword@#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
@@ -348,12 +348,12 @@ end
 
         it 'fails with a 404' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{SHOULD_NEVER_EXIST_ID}',
-          ensure => 'present',
-          source => 'https://#{PUPPETLABS_APT_URL}/herpderp.gpg',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{SHOULD_NEVER_EXIST_ID}',
+              ensure => 'present',
+              source => 'https://#{PUPPETLABS_APT_URL}/herpderp.gpg',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{404 Not Found})
@@ -362,12 +362,12 @@ end
 
         it 'fails with a socket error' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{SHOULD_NEVER_EXIST_ID}',
-          ensure => 'present',
-          source => 'https://apt.puppetlabss.com/herpderp.gpg',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{SHOULD_NEVER_EXIST_ID}',
+              ensure => 'present',
+              source => 'https://apt.puppetlabss.com/herpderp.gpg',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{could not resolve})
@@ -387,12 +387,12 @@ end
 
         it 'works' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => 'EF8D349F',
-          ensure => 'present',
-          source => '/tmp/puppetlabs-pubkey.gpg',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => 'EF8D349F',
+              ensure => 'present',
+              source => '/tmp/puppetlabs-pubkey.gpg',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
@@ -403,12 +403,12 @@ end
       context '/path/that/does/not/exist' do
         it 'fails' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => '/tmp/totally_bogus.file',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => '/tmp/totally_bogus.file',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{does not exist})
@@ -426,12 +426,12 @@ end
         end
         it 'fails' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          source => '/tmp/fake-key.gpg',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure => 'present',
+              source => '/tmp/fake-key.gpg',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{no valid OpenPGP data found})
@@ -462,12 +462,12 @@ end
       context 'fingerprint in id matches fingerprint from remote key' do
         it 'works' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
-          ensure  => 'present',
-          source  => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
+              ensure  => 'present',
+              source  => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
@@ -477,12 +477,12 @@ end
       context 'fingerprint in id does NOT match fingerprint from remote key' do
         it 'works' do
           pp = <<-EOS
-         { 'puppetlabs':
-          id      => '6F6B15509CF8E59E6E469F327F438280EF8D9999',
-          ensure  => 'present',
-          source  => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
-        }
-        EOS
+            { 'puppetlabs':
+              id      => '6F6B15509CF8E59E6E469F327F438280EF8D9999',
+              ensure  => 'present',
+              source  => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
+            }
+          EOS
 
           execute_manifest(pp, expect_failures: true) do |r|
             expect(r.stderr).to match(%r{do not match})
