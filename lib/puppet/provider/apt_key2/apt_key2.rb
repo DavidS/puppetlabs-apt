@@ -11,27 +11,23 @@ class Puppet::Provider::AptKey2::AptKey2
 
   def canonicalize(context, resources)
     resources.each do |r|
-      r[:name] ||= r[:id]
-      r[:name] = if r[:name].start_with?('0x')
-                   r[:name][2..-1].upcase
-                 else
-                   r[:name].upcase
-                 end
+      r[:id] = if r[:id].start_with?('0x')
+                 r[:id][2..-1].upcase
+               else
+                 r[:id].upcase
+               end
 
       # If an 8 or 16 character short was provided; change the name to the full 40 character fingerprint
       # For any other length; leave the name unchanged. This value will subsequently fail validation.
-      # TODO: The full 40 characters could be substituted in any time r[:name].length != 40 but to remain like-for-like
+      # TODO: The full 40 characters could be substituted in any time r[:id].length != 40 but to remain like-for-like
       # with the pre resource-api version of this type, allow the name to fail validation if not 8, 16 or 40 chars long.
-      if [8, 16].include?(r[:name].length)
-        context.warning(r[:name], 'The name should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.')
-        fingerprint = key_list_lines(context)
-                      .select { |l| l.start_with?('fpr:') }
-                      .map { |l| l.split(':').last }
-                      .find { |fp| fp.end_with? r[:name] }
-        r[:name] = fingerprint if fingerprint
-      end
-
-      r[:id] = r[:name]
+      next unless [8, 16].include?(r[:id].length)
+      context.warning(r[:id], 'The name should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.')
+      fingerprint = key_list_lines(context)
+                    .select { |l| l.start_with?('fpr:') }
+                    .map { |l| l.split(':').last }
+                    .find { |fp| fp.end_with? r[:id] }
+      r[:id] = fingerprint if fingerprint
     end
   end
 
@@ -104,7 +100,7 @@ class Puppet::Provider::AptKey2::AptKey2
 
   def set(context, changes)
     changes.each do |name, change|
-      is = change.key?(:is) ? change[:is] : get(context).find { |key| key[:name] == name }
+      is = change.key?(:is) ? change[:is] : get(context).find { |key| key[:id] == name }
       should = change[:should]
 
       is = { name: name, ensure: 'absent' } if is.nil?
@@ -132,7 +128,7 @@ class Puppet::Provider::AptKey2::AptKey2
         if should[:options]
           args.push('--keyserver-options', should[:options])
         end
-        args.push('--recv-keys', should[:name])
+        args.push('--recv-keys', should[:id])
         # apt-key may write warnings to stdout instead of stderr, therefore make stdout visible
         @apt_key_cmd.run(context, *args, stdout_loglevel: :notice)
       elsif should[:content]

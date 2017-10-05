@@ -50,23 +50,23 @@ EOS
     end
 
     it('works with empty inputs') { expect(provider.canonicalize(context, [])).to eq [] }
-    it('cleans up 0x hex numbers') { expect(provider.canonicalize(context, [{ name: '0xabcd' }])).to eq [{ name: 'ABCD', id: 'ABCD' }] }
-    it('upcases bare hex numbers alone') { expect(provider.canonicalize(context, [{ name: 'abcd' }])).to eq [{ name: 'ABCD', id: 'ABCD' }] }
-    it('leaves bare upper case hex numbers alone') { expect(provider.canonicalize(context, [{ name: 'ABCD' }])).to eq [{ name: 'ABCD', id: 'ABCD' }] }
+    it('cleans up 0x hex numbers') { expect(provider.canonicalize(context, [{ id: '0xabcd' }])).to eq [{ id: 'ABCD' }] }
+    it('upcases bare hex numbers alone') { expect(provider.canonicalize(context, [{ id: 'abcd' }])).to eq [{ id: 'ABCD' }] }
+    it('leaves bare upper case hex numbers alone') { expect(provider.canonicalize(context, [{ id: 'ABCD' }])).to eq [{  id: 'ABCD' }] }
     it('handles multiple inputs') do
       expect(provider.canonicalize(context,
-                                   [{ name: '0xabcd' },
-                                    { name: 'abcd' },
-                                    { name: 'ABCD' }]))
-        .to eq [{ name: 'ABCD', id: 'ABCD' },
-                { name: 'ABCD', id: 'ABCD' },
-                { name: 'ABCD', id: 'ABCD' }]
+                                   [{ id: '0xabcd' },
+                                    { id: 'abcd' },
+                                    { id: 'ABCD' }]))
+        .to eq [{ id: 'ABCD' },
+                { id: 'ABCD' },
+                { id: 'ABCD' }]
     end
     it('extends short fingerprints to full 40 chars if the key exists') {
-      expect(provider.canonicalize(context, [{ name: '2B90D010' }])).to eq [{ name: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010', id: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010' }]
+      expect(provider.canonicalize(context, [{ id: '2B90D010' }])).to eq [{ id: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010' }]
     }
     it('handles invalid inputs') do
-      expect { provider.canonicalize(context, [{ name: 'not a hex number' }]) }.not_to raise_error
+      expect { provider.canonicalize(context, [{ id: 'not a hex number' }]) }.not_to raise_error
     end
   end
 
@@ -147,10 +147,10 @@ EOS
         expect {
           provider.set(context, fingerprint => {
                          is: {
-                           name: fingerprint, ensure: :present
+                           id: fingerprint, ensure: :present
                          },
                          should: {
-                           name: fingerprint, ensure: :present
+                           id: fingerprint, ensure: :present
                          },
                        })
         }.not_to raise_error
@@ -162,14 +162,14 @@ EOS
             .with(context)
             .and_return([
                           {
-                            name: fingerprint,
+                            id: fingerprint,
                             ensure: 'present',
                           },
                         ])
           expect {
             provider.set(context, fingerprint => {
                            should: {
-                             name: fingerprint, ensure: :present
+                             id: fingerprint, ensure: :present
                            },
                          })
           }.not_to raise_error
@@ -183,7 +183,7 @@ EOS
         {
           is: nil,
           should: {
-            name: fingerprint,
+            id: fingerprint,
             ensure: :absent,
           },
         })
@@ -201,7 +201,7 @@ EOS
         {
           is: nil,
           should: {
-            name: fingerprint,
+            id: fingerprint,
             ensure: :present,
             server: :'keyserver.example.com',
           },
@@ -218,7 +218,7 @@ EOS
         {
           is: nil,
           should: {
-            name: fingerprint,
+            id: fingerprint,
             ensure: :present,
             options: 'some-options',
             server: :'keyserver.example.com',
@@ -237,7 +237,7 @@ EOS
         {
           is: nil,
           should: {
-            name: fingerprint,
+            id: fingerprint,
             ensure: :present,
             content: 'public gpg key block',
           },
@@ -259,7 +259,7 @@ EOS
          {
            is: nil,
            should: {
-             name: fingerprint,
+             id: fingerprint,
              ensure: :present,
              source: 'some source',
            },
@@ -276,12 +276,12 @@ EOS
         provider.set(context, fingerprint =>
         {
           is: {
-            name: fingerprint,
+            id: fingerprint,
             ensure: :present,
             server: :'keyserver.ubuntu.com',
           },
           should: {
-            name: fingerprint,
+            id: fingerprint,
             ensure: :absent,
           },
         })
@@ -294,10 +294,10 @@ EOS
         expect {
           provider.set(context, fingerprint => {
                          is: {
-                           name: fingerprint, ensure: :present
+                           id: fingerprint, ensure: :present
                          },
                          should: {
-                           name: fingerprint, ensure: :present, source: '/tmp/file', content: 'some gpg key'
+                           id: fingerprint, ensure: :present, source: '/tmp/file', content: 'some gpg key'
                          },
                        })
         }.not_to raise_error
