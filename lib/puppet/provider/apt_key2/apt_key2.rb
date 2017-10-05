@@ -111,17 +111,17 @@ class Puppet::Provider::AptKey2::AptKey2
       is = { name: name, ensure: 'absent' } if is.nil?
       should = { name: name, ensure: 'absent' } if should.nil?
 
+      if should[:source] && should[:content]
+        context.failed(name, message: 'The properties `content` and `source` are both set, but mutually exclusive')
+        next
+      end
+
       if is[:ensure].to_s == 'absent' && should[:ensure].to_s == 'present'
         create(context, name, should)
       elsif is[:ensure].to_s == 'present' && should[:ensure].to_s == 'absent'
         delete(context, name)
       end
     end
-    # target_state.each do |title, resource|
-    #   if resource[:source] && resource[:content]
-    #     logger.fail(title, 'The properties content and source are mutually exclusive')
-    #     next
-    #   end
   end
 
   def create(context, name, should)

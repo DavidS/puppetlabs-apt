@@ -331,5 +331,21 @@ EOS
         })
       end
     end
+
+    context 'when specifying both source and content' do
+      it 'reports an error' do
+        expect(context).to receive(:failed).with(fingerprint, message: 'The properties `content` and `source` are both set, but mutually exclusive')
+        expect {
+          provider.set(context, fingerprint => {
+                         is: {
+                           name: fingerprint, ensure: :present
+                         },
+                         should: {
+                           name: fingerprint, ensure: :present, source: '/tmp/file', content: 'some gpg key'
+                         },
+                       })
+        }.not_to raise_error
+      end
+    end
   end
 end
