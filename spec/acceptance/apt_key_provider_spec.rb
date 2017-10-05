@@ -19,11 +19,11 @@ TIMEOUT_RETRY_WAIT             = 5
 TIMEOUT_ERROR_MATCHER = %r{no valid OpenPGP data found}
 
 def check_key(fingerprint)
-  expect(shell_ex("apt-key adv --list-keys --with-colons --fingerprint | grep #{fingerprint}").exit_code).to eq 0
+  expect(shell_ex("apt-key adv --list-keys --with-colons --fingerprint | grep #{fingerprint}", accept_all_exit_codes: true).exit_code).to eq 0
 end
 
 def check_key_absent(fingerprint)
-  expect(shell_ex("apt-key adv --list-keys --with-colons --fingerprint | grep #{fingerprint}").exit_code).not_to eq 0
+  expect(shell_ex("apt-key adv --list-keys --with-colons --fingerprint | grep #{fingerprint}", accept_all_exit_codes: true).exit_code).not_to eq 0
 end
 
 %w[apt_key2 apt_key].each do |typename|
