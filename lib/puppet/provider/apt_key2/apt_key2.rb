@@ -182,7 +182,7 @@ class Puppet::Provider::AptKey2::AptKey2
                   .stdout
                   .each_line
                   .select { |line| line =~ %r{^fpr:} }
-                  .map { |fpr| fpr.strip.split(':')[9] }
+                  .map { |fpr| fpr.split(':')[9] }
 
         if extracted_keys.include? name
           context.debug('Fingerprint verified against extracted key')
