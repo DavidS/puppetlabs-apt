@@ -149,15 +149,14 @@ class Puppet::Provider::AptKey2::AptKey2
 
   def delete(context, name)
     context.deleting(name) do
-      # Although canonicalize logs a warning NOT to use the short id instead of all 40 characters, `apt-key del` fails to delete
-      # on some systems unless the short id is used. Additionally, such systems will return 0 even though deletion failed.
-      # Ref: https://bugs.launchpad.net/ubuntu/+source/apt/+bug/1481871
-      @apt_key_cmd.run(context, 'del', name[-8..-1])
+      loop do
+        # Although canonicalize logs a warning NOT to use the short id instead of all 40 characters, `apt-key del` fails to delete
+        # on some systems unless the short id is used. Additionally, such systems will return 0 even though deletion failed.
+        # Ref: https://bugs.launchpad.net/ubuntu/+source/apt/+bug/1481871
 
-      # begin
-      #   apt_key('del', resource[:short])
-      #   r = execute(["#{command(:apt_key)} list | grep '/#{resource[:short]}\s'"], failonfail: false)
-      # end while r.exitstatus.zero?
+        @apt_key_cmd.run(context, 'del', name[-8..-1])
+        break unless key_list_lines.any? { |l| l.include?(name) }
+      end
     end
   end
 
