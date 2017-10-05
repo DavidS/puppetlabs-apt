@@ -9,7 +9,6 @@ RSpec.describe Puppet::Provider::AptKey2::AptKey2 do
 
   let(:context) { instance_double('Puppet::ResourceApi::BaseContext', 'context') }
   let(:apt_key_cmd) { instance_double('Puppet::ResourceApi::Command', 'apt_key_cmd') }
-  let(:gpg_cmd) { instance_double('Puppet::ResourceApi::Command', 'gpg_cmd') }
 
   let(:key_list) do
     <<EOS
@@ -35,7 +34,6 @@ EOS
   before(:each) do
     allow(context).to receive(:is_a?).with(Puppet::ResourceApi::BaseContext).and_return(true)
     allow(Puppet::ResourceApi::Command).to receive(:new).with('apt-key').and_return(apt_key_cmd)
-    allow(Puppet::ResourceApi::Command).to receive(:new).with('/usr/bin/gpg').and_return(gpg_cmd)
     # the provider should never call into the system on its own
     expect(provider).not_to receive(:`) # rubocop:disable RSpec/ExpectInHook
   end
@@ -209,26 +207,32 @@ EOS
           },
         })
       end
+
+      it 'passes options to apt-key' do
+        expect(context).to receive(:creating).with(fingerprint).and_yield
+        expect(apt_key_cmd).to receive(:run)
+          .with(context,
+                'adv', '--keyserver', 'keyserver.example.com', '--keyserver-options', 'some-options', '--recv-keys', fingerprint,
+                stdout_loglevel: :notice).and_return(OpenStruct.new(exit_code: 0))
+        provider.set(context, fingerprint =>
+        {
+          is: nil,
+          should: {
+            name: fingerprint,
+            ensure: :present,
+            options: 'some-options',
+            server: :'keyserver.example.com',
+          },
+        })
+      end
     end
 
     context 'when adding a key from a string' do
-      let(:key_tempfile) { instance_double('Tempfile') }
-
       it 'updates the system' do
-        expect(context).to receive(:creating).with(fingerprint).and_yield
-        expect(Tempfile).to receive(:new).with('apt_key').and_return(key_tempfile)
-        expect(key_tempfile).to receive(:write).with('public gpg key block')
-        allow(key_tempfile).to receive(:path).with(no_args).and_return('tempfilename')
-        allow(key_tempfile).to receive(:close)
-        expect(key_tempfile).to receive(:unlink)
-        expect(File).to receive(:executable?).with('/usr/bin/gpg').and_return(true)
-        expect(gpg_cmd).to receive(:run)
-          .with(context, '--with-fingerprint', '--with-colons', 'tempfilename',
-                stdout_destination: :store)
-          .and_return(OpenStruct.new(stdout: "\nfpr:::::::::#{fingerprint}:\n"))
-        expect(context).to receive(:debug).with('Fingerprint verified against extracted key')
+        allow(context).to receive(:creating).with(fingerprint).and_yield
+        allow(described_class).to receive(:temp_key_file).with(context, fingerprint, 'public gpg key block').and_yield('/tmp/keyfile')
+        expect(apt_key_cmd).to receive(:run).with(context, 'add', '/tmp/keyfile').and_return(OpenStruct.new(exit_code: 0))
 
-        expect(apt_key_cmd).to receive(:run).with(context, 'add', 'tempfilename').and_return(OpenStruct.new(exit_code: 0))
         provider.set(context, fingerprint =>
         {
           is: nil,
@@ -244,70 +248,22 @@ EOS
     describe 'source =>' do
       before(:each) do
         allow(context).to receive(:creating).with(fingerprint).and_yield
-        # shortcut excessive stubbing. The add_key_from_content method is already exercised in 'when adding a key from a string'
-        allow(provider).to receive(:add_key_from_content).with(context, fingerprint, 'public gpg key block') # rubocop:disable RSpec/SubjectStub
+        allow(described_class).to receive(:temp_key_file).with(context, fingerprint, 'public gpg key block').and_yield('/tmp/keyfile')
+        allow(apt_key_cmd).to receive(:run).with(context, 'add', '/tmp/keyfile')
       end
 
-      describe 'a path' do
-        it 'updates the system using that file' do
-          expect(File).to receive(:exist?).with('/tmp/keyfile').and_return(true)
-          expect(File).to receive(:read).with('/tmp/keyfile').and_return('public gpg key block')
+      it 'fetches the content from the source' do
+        expect(described_class).to receive(:content_from_source).with('some source').and_return('public gpg key block')
 
-          provider.set(context, fingerprint =>
-          {
-            is: nil,
-            should: {
-              name: fingerprint,
-              ensure: :present,
-              source: '/tmp/keyfile',
-            },
-          })
-        end
-      end
-
-      describe 'a remote URL' do
-        let(:uri) { object_double(URI.parse('http://example.org/gpg.txt')) }
-
-        it 'updates the system using that download' do
-          expect(URI).to receive(:parse).with('http://example.org/gpg.txt').and_return(uri)
-          expect(uri).to receive(:scheme).and_return('http')
-          expect(uri).to receive(:userinfo).and_return(nil)
-          expect(uri).to receive(:read).and_return('public gpg key block')
-
-          provider.set(context, fingerprint =>
-          {
-            is: nil,
-            should: {
-              name: fingerprint,
-              ensure: :present,
-              source: 'http://example.org/gpg.txt',
-            },
-          })
-        end
-      end
-
-      describe 'a remote URL with username and password' do
-        let(:uri) { object_double(URI.parse('http://foo:bar@example.org/gpg.txt')) }
-        let(:io) { instance_double('IO') }
-
-        it 'updates the system using that download' do
-          expect(URI).to receive(:parse).with('http://foo:bar@example.org/gpg.txt').and_return(uri)
-          expect(uri).to receive(:scheme).and_return('http')
-          expect(uri).to receive(:userinfo).and_return('foo:bar').twice
-          expect(uri).to receive(:userinfo=).with('')
-          expect(provider).to receive(:open).with(uri, http_basic_authentication: %w[foo bar]).and_return(io) # rubocop:disable RSpec/SubjectStub
-          expect(io).to receive(:read).and_return('public gpg key block')
-
-          provider.set(context, fingerprint =>
-          {
-            is: nil,
-            should: {
-              name: fingerprint,
-              ensure: :present,
-              source: 'http://foo:bar@example.org/gpg.txt',
-            },
-          })
-        end
+        provider.set(context, fingerprint =>
+         {
+           is: nil,
+           should: {
+             name: fingerprint,
+             ensure: :present,
+             source: 'some source',
+           },
+         })
       end
     end
 
@@ -345,6 +301,132 @@ EOS
                          },
                        })
         }.not_to raise_error
+      end
+    end
+  end
+
+  describe '.temp_key_file(context, name, content, &block)' do
+    let(:gpg_cmd) { instance_double('Puppet::ResourceApi::Command', 'gpg_cmd') }
+    let(:tempfile) { instance_double('Tempfile') }
+    let(:fingerprint) { 'A' * 40 }
+
+    before(:each) do
+      allow(Puppet::ResourceApi::Command).to receive(:new).with('/usr/bin/gpg').and_return(gpg_cmd)
+      allow(Tempfile).to receive(:new).with('apt_key').and_return(tempfile)
+      allow(tempfile).to receive(:write).with('public gpg key block')
+      allow(tempfile).to receive(:path).with(no_args).and_return('tempfilename')
+      allow(tempfile).to receive(:close)
+      allow(tempfile).to receive(:unlink)
+    end
+
+    context 'with gpg present' do
+      before(:each) do
+        allow(File).to receive(:executable?).with('/usr/bin/gpg').and_return(true)
+      end
+
+      context 'when the finger print matches' do
+        before(:each) do
+          allow(gpg_cmd).to receive(:run)
+            .with(context, '--with-fingerprint', '--with-colons', 'tempfilename',
+                  stdout_destination: :store)
+            .and_return(OpenStruct.new(stdout: "\nfpr:::::::::#{fingerprint}:\n"))
+        end
+
+        it 'verifies the key' do
+          expect(context).to receive(:debug).with('Fingerprint verified against extracted key')
+
+          expect { |b| described_class.temp_key_file(context, fingerprint, 'public gpg key block', &b) }.to yield_with_args('tempfilename')
+        end
+
+        it 'matches incomplete fingerprints' do
+          expect(context).to receive(:debug).with('Fingerprint matches the extracted key')
+
+          expect { |b| described_class.temp_key_file(context, fingerprint[0...8], 'public gpg key block', &b) }.to yield_with_args('tempfilename')
+        end
+      end
+      context 'when the finger print does not match' do
+        before(:each) do
+          allow(gpg_cmd).to receive(:run)
+            .with(context, '--with-fingerprint', '--with-colons', 'tempfilename',
+                  stdout_destination: :store)
+            .and_return(OpenStruct.new(stdout: "\nfpr:::::::::BBBBBBBBBBBBBBBBBBBBBBBBBBB:\n"))
+        end
+
+        it 'reports an error' do
+          expect { described_class.temp_key_file(context, fingerprint, 'public gpg key block') }.to raise_error(
+            ArgumentError, %r{\AThe fingerprint in your manifest.*#{fingerprint}.*BBBBBBBBBBBBBBBBBBBBBBBBBBB.*do not match}
+          )
+        end
+      end
+    end
+
+    context 'without gpg present' do
+      before(:each) do
+        allow(File).to receive(:executable?).with('/usr/bin/gpg').and_return(false)
+      end
+      it 'processes the key and warns the user' do
+        expect(context).to receive(:warning).with('/usr/bin/gpg cannot be found for verification of the fingerprint.')
+        expect { |b| described_class.temp_key_file(context, fingerprint, 'public gpg key block', &b) }.to yield_with_args('tempfilename')
+      end
+    end
+  end
+
+  describe '.content_from_source(uri)' do
+    context 'with a local path' do
+      it 'reads that file' do
+        expect(File).to receive(:exist?).with('/tmp/keyfile').and_return(true)
+        expect(File).to receive(:read).with('/tmp/keyfile').and_return('public gpg key block')
+
+        described_class.content_from_source('/tmp/keyfile')
+      end
+    end
+
+    context 'with a remote URL' do
+      let(:argument) { 'http://example.org/gpg.txt' }
+      let(:uri) { object_double(URI.parse(argument)) }
+      let(:scheme) { 'http' }
+      let(:userinfo) { nil }
+
+      before(:each) do
+        allow(URI).to receive(:parse).with(argument).and_return(uri)
+        allow(uri).to receive(:scheme).and_return(scheme)
+        allow(uri).to receive(:userinfo).and_return(userinfo)
+      end
+
+      it 'fetches the content' do
+        expect(uri).to receive(:read).and_return('public gpg key block')
+
+        described_class.content_from_source(argument)
+      end
+
+      context 'with username and password' do
+        let(:argument) { 'http://foo:bar@example.org/gpg.txt' }
+        let(:userinfo) { 'foo:bar' }
+        let(:io) { instance_double('IO') }
+
+        it 'updates the system using that download' do
+          expect(uri).to receive(:userinfo=).with('')
+          expect(described_class).to receive(:open).with(uri, http_basic_authentication: %w[foo bar]).and_return(io)
+          expect(io).to receive(:read).and_return('public gpg key block')
+
+          described_class.content_from_source(argument)
+        end
+      end
+
+      context 'when the server is not reachable' do
+        it 'reports the error' do
+          expect(uri).to receive(:read).and_raise OpenURI::HTTPError.new('error message', nil)
+
+          expect { described_class.content_from_source(argument) }.to raise_error "error message for #{argument}"
+        end
+      end
+
+      context 'when the servername is not resolvable' do
+        it 'reports the error' do
+          expect(uri).to receive(:read).and_raise SocketError
+
+          expect { described_class.content_from_source(argument) }.to raise_error "could not resolve #{argument}"
+        end
       end
     end
   end

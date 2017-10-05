@@ -7,7 +7,6 @@ require 'tempfile'
 class Puppet::Provider::AptKey2::AptKey2
   def initialize
     @apt_key_cmd = Puppet::ResourceApi::Command.new 'apt-key'
-    @gpg_cmd = Puppet::ResourceApi::Command.new '/usr/bin/gpg'
   end
 
   def canonicalize(context, resources)
@@ -139,10 +138,7 @@ class Puppet::Provider::AptKey2::AptKey2
       elsif should[:content]
         add_key_from_content(context, name, should[:content])
       elsif should[:source]
-        add_key_from_content(context, name, content_from_source(should[:source]))
-        # In case we really screwed up, better safe than sorry.
-      else
-        context.fail("an unexpected condition occurred while trying to add the key: #{name} (content: #{should[:content].inspect}, source: #{should[:source].inspect})")
+        add_key_from_content(context, name, self.class.content_from_source(should[:source]))
       end
     end
   end
@@ -161,27 +157,28 @@ class Puppet::Provider::AptKey2::AptKey2
   end
 
   def add_key_from_content(context, name, content)
-    temp_key_file(context, name, content) do |key_file|
+    self.class.temp_key_file(context, name, content) do |key_file|
       @apt_key_cmd.run(context, 'add', key_file)
     end
   end
 
   # This method writes out the specified contents to a temporary file and
   # confirms that the fingerprint from the file, matches the long key that is in the manifest
-  def temp_key_file(context, name, content)
+  def self.temp_key_file(context, name, content)
     file = Tempfile.new('apt_key')
     begin
       file.write content
       file.close
       if File.executable? '/usr/bin/gpg'
         extracted_keys =
-          @gpg_cmd.run(context,
-                       '--with-fingerprint', '--with-colons', file.path,
-                       stdout_destination: :store)
-                  .stdout
-                  .each_line
-                  .select { |line| line =~ %r{^fpr:} }
-                  .map { |fpr| fpr.split(':')[9] }
+          Puppet::ResourceApi::Command.new('/usr/bin/gpg')
+                                      .run(context,
+                                           '--with-fingerprint', '--with-colons', file.path,
+                                           stdout_destination: :store)
+                                      .stdout
+                                      .each_line
+                                      .select { |line| line =~ %r{^fpr:} }
+                                      .map { |fpr| fpr.split(':')[9] }
 
         if extracted_keys.include? name
           context.debug('Fingerprint verified against extracted key')
@@ -201,7 +198,7 @@ class Puppet::Provider::AptKey2::AptKey2
     end
   end
 
-  def content_from_source(uri)
+  def self.content_from_source(uri)
     parsed_uri = URI.parse(uri)
     if parsed_uri.scheme.nil?
       raise "The file #{uri} does not exist" unless File.exist?(uri)
