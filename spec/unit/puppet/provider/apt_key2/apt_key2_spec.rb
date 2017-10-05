@@ -36,7 +36,8 @@ EOS
     allow(context).to receive(:is_a?).with(Puppet::ResourceApi::BaseContext).and_return(true)
     allow(Puppet::ResourceApi::Command).to receive(:new).with('apt-key').and_return(apt_key_cmd)
     allow(Puppet::ResourceApi::Command).to receive(:new).with('/usr/bin/gpg').and_return(gpg_cmd)
-    expect(subject).not_to receive(:`) # rubocop:disable RSpec/NamedSubject,RSpec/ExpectInHook
+    # the provider should never call into the system on its own
+    expect(provider).not_to receive(:`) # rubocop:disable RSpec/ExpectInHook
   end
 
   describe '#canonicalize(resources)' do
@@ -224,7 +225,7 @@ EOS
       before(:each) do
         allow(context).to receive(:creating).with(fingerprint).and_yield
         # shortcut excessive stubbing. The add_key_from_content method is already exercised in 'when adding a key from a string'
-        expect(provider).to receive(:add_key_from_content).with(context, fingerprint, 'public gpg key block') # rubocop:disable RSpec/SubjectStub,RSpec/ExpectInHook
+        allow(provider).to receive(:add_key_from_content).with(context, fingerprint, 'public gpg key block') # rubocop:disable RSpec/SubjectStub
       end
 
       describe 'a path' do
@@ -293,7 +294,9 @@ EOS
     context 'when deleting a key' do
       it 'updates the system' do
         expect(context).to receive(:deleting).with(fingerprint).and_yield
-        expect(apt_key_cmd).to receive(:run).with(context, 'del', short).and_return(OpenStruct.new(exit_code: 0))
+        # key_list_lines is exercised in `#get`
+        expect(provider).to receive(:key_list_lines).with(no_args).and_return(['a', 'b', fingerprint], ['a', 'b', fingerprint], []) # rubocop:disable RSpec/SubjectStub
+        expect(apt_key_cmd).to receive(:run).with(context, 'del', short).and_return(OpenStruct.new(exit_code: 0)).thrice
         provider.set(context, fingerprint =>
         {
           is: {
