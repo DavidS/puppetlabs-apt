@@ -105,7 +105,7 @@ class Puppet::Provider::AptKey2::AptKey2
 
   def set(context, changes)
     changes.each do |name, change|
-      is = change.key?(:is) ? change[:is] : get_single(name)
+      is = change.key?(:is) ? change[:is] : get(context).find { |key| key[:name] == name }
       should = change[:should]
 
       is = { name: name, ensure: 'absent' } if is.nil?

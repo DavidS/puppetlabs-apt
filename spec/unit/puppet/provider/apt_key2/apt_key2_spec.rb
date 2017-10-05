@@ -157,6 +157,26 @@ EOS
                        })
         }.not_to raise_error
       end
+
+      context 'without passing in `is:`' do
+        it 'does nothing' do
+          allow(provider).to receive(:get) # rubocop:disable RSpec/SubjectStub
+            .with(context)
+            .and_return([
+                          {
+                            name: fingerprint,
+                            ensure: 'present',
+                          },
+                        ])
+          expect {
+            provider.set(context, fingerprint => {
+                           should: {
+                             name: fingerprint, ensure: :present
+                           },
+                         })
+          }.not_to raise_error
+        end
+      end
     end
 
     context 'when managing an absent key' do
