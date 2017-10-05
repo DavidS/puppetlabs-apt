@@ -48,6 +48,10 @@ end
         shell_ex('apt-key add /tmp/fedora.txt >/dev/null 2>&1')
       end
 
+      after(:all) do
+        shell_ex('rm -f /tmp/fedora.txt')
+      end
+
       context 'when looked for using puppet resource' do
         include_context 'a puppet resource run', typename, fedora[:fingerprint], trace: true
         puppet_resource_should_show('ensure', 'present')
