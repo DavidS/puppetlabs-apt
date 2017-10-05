@@ -45,6 +45,7 @@ Puppet::ResourceApi.register_type(
     options:     {
       type: 'Optional[String]',
       desc: 'Additional options to pass to apt-key\'s --keyserver-options.',
+      behaviour: :parameter,
     },
     fingerprint: {
       type:      'Pattern[/[a-f]{40}/]',

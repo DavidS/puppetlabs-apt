@@ -444,12 +444,12 @@ end
       context 'debug' do
         it 'works' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id      => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure  => 'present',
-          options => 'debug',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id      => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure  => 'present',
+              options => 'debug',
+            }
+          EOS
 
           execute_manifest(pp, catch_failures: true)
           execute_manifest(pp, catch_changes: true)
