@@ -147,7 +147,7 @@ class Puppet::Provider::AptKey2::AptKey2
         # Ref: https://bugs.launchpad.net/ubuntu/+source/apt/+bug/1481871
 
         @apt_key_cmd.run(context, 'del', name[-8..-1])
-        break unless key_list_lines.any? { |l| l.include?(name) }
+        break unless key_list_lines(context).any? { |l| l.include?(name) }
       end
     end
   end

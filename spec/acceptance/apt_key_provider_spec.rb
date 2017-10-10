@@ -65,19 +65,41 @@ end
       end
 
       context 'with ensure => absent set' do
-        it 'is removed' do
-          pp = <<-EOS
+        # This test cover proper noop handling in the resource API
+        # TODO: provide better acceptance testing there.
+        context 'with noop set' do
+          it 'logs the change, but doesn\'t do it' do
+            pp = <<-EOS
+              #{typename} { 'fedora':
+                id     => '#{fedora[:fingerprint]}',
+                ensure => 'absent',
+                noop   => true,
+              }
+            EOS
+
+            # Time to NOT remove it using Puppet
+            result = execute_manifest(pp, trace: true, catch_changes: true)
+            expect(result.stdout).to match %r{Apt_key2\[(fedora|#{fedora[:fingerprint]})\]/ensure: current_value 'present', should be 'absent' \(noop\)}i
+            check_key(fedora[:fingerprint])
+            execute_manifest(pp, trace: true, catch_changes: true)
+            check_key(fedora[:fingerprint])
+          end
+        end
+        context 'without noop set' do
+          it 'is removed' do
+            pp = <<-EOS
             #{typename} { 'fedora':
               id     => '#{fedora[:fingerprint]}',
               ensure => 'absent',
             }
           EOS
 
-          # Time to remove it using Puppet
-          execute_manifest(pp, trace: true, catch_failures: true)
-          check_key_absent(fedora[:fingerprint])
-          execute_manifest(pp, trace: true, catch_changes: true)
-          check_key_absent(fedora[:fingerprint])
+            # Time to remove it using Puppet
+            execute_manifest(pp, trace: true, catch_failures: true)
+            check_key_absent(fedora[:fingerprint])
+            execute_manifest(pp, trace: true, catch_changes: true)
+            check_key_absent(fedora[:fingerprint])
+          end
         end
       end
     end
