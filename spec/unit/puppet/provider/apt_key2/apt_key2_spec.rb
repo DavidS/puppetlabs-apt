@@ -271,7 +271,7 @@ EOS
       it 'updates the system' do
         expect(context).to receive(:deleting).with(fingerprint).and_yield
         # key_list_lines is exercised in `#get`
-        expect(provider).to receive(:key_list_lines).with(no_args).and_return(['a', 'b', fingerprint], ['a', 'b', fingerprint], []) # rubocop:disable RSpec/SubjectStub
+        expect(provider).to receive(:key_list_lines).with(context).and_return(['a', 'b', fingerprint], ['a', 'b', fingerprint], []) # rubocop:disable RSpec/SubjectStub
         expect(apt_key_cmd).to receive(:run).with(context, 'del', short).and_return(OpenStruct.new(exit_code: 0)).thrice
         provider.set(context, fingerprint =>
         {
