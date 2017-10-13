@@ -65,6 +65,10 @@ end
       end
 
       context 'with ensure => absent set' do
+        before(:each) do
+          shell_ex('apt-key add /tmp/fedora.txt >/dev/null 2>&1')
+        end
+
         # This test cover proper noop handling in the resource API
         # TODO: provide better acceptance testing there.
         context 'with noop set' do
@@ -85,6 +89,7 @@ end
             check_key(fedora[:fingerprint])
           end
         end
+
         context 'without noop set' do
           it 'is removed' do
             pp = <<-EOS
