@@ -83,7 +83,7 @@ end
 
             # Time to NOT remove it using Puppet
             result = execute_manifest(pp, trace: true, catch_changes: true)
-            expect(result.stdout).to match %r{Apt_key2\[(fedora|#{fedora[:fingerprint]})\]/ensure: current_value 'present', should be 'absent' \(noop\)}i
+            expect(result.stdout).to match %r{#{typename}\[(fedora|#{fedora[:fingerprint]})\]/ensure: current_value '?present'?, should be '?absent'? \(noop\)}i
             check_key(fedora[:fingerprint])
             execute_manifest(pp, trace: true, catch_changes: true)
             check_key(fedora[:fingerprint])
