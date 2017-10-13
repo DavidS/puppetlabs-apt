@@ -67,6 +67,7 @@ gem 'puppet-resource_api', git: 'https://github.com/puppetlabs/puppet-resource_a
 gem 'childprocesscore', git: 'https://github.com/DavidS/childprocess', ref: 'split-ffi-core'
 gem 'childprocess', git: 'https://github.com/DavidS/childprocess', ref: 'split-ffi-core' if RbConfig::CONFIG['host_os'] =~ /mswin|msys|mingw32/i
 gem 'coveralls'
+gem 'codecov'
 gem 'simplecov-console'
 
 # Evaluate Gemfile.local if it exists
